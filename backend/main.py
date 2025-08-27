@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes, allowing frontend to connect
 
-DATA_FILE = 'questionnaire_data.json'
+DATA_FILE = '../data/questionnaire_data.json'
 PORT = 8001
 
 # Function to load existing data from file
