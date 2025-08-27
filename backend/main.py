@@ -2,6 +2,7 @@ import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes, allowing frontend to connect
@@ -22,6 +23,8 @@ def load_data():
 
 # Function to save data to file
 def save_data(data):
+    # Ensure the parent directory exists
+    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
@@ -40,6 +43,10 @@ def submit_questionnaire():
         return jsonify({"message": "联系电话需要为数字"}), 400
     if not new_entry.get('affectedArea') or len(new_entry['affectedArea']) == 0:
         return jsonify({"message": "请选择受累部位"}), 400
+
+    # Add server-side submission timestamp (local time with timezone offset, seconds precision)
+    submission_time = datetime.now().astimezone().replace(microsecond=0).isoformat()
+    new_entry['submissionTime'] = submission_time
 
     # Load existing data, add new entry, and save
     data = load_data()
