@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useCallback and useMemo
-import { Phone, User, Eye, AlarmClock, ClipboardCheck, History, XCircle, CheckCircle, WifiOff } from 'lucide-react'; // Importing icons, added WifiOff
+import { Phone, User, Eye, AlarmClock, ClipboardCheck, History, XCircle, CheckCircle, WifiOff, Calendar } from 'lucide-react'; // Importing icons, added WifiOff and Calendar for age
 
 // Eye-specific questions component moved outside App for better performance
 const EyeSpecificQuestions = React.memo(({ eyeName, eyeData, onEyeChange, onEyeMultiselectChange, sectionTitle, errors = {} }) => {
@@ -158,6 +158,8 @@ const App = () => {
     // State to store form data
     const [formData, setFormData] = useState({
         name: '',
+    age: '',
+    gender: '',
         phone: '',
         affectedArea: [], // Now an array to handle multiple selections
         leftEye: null,
@@ -246,11 +248,37 @@ const App = () => {
         });
     }, []);
 
+    // Light haptic feedback for touch devices (best-effort)
+    const vibrate = useCallback((ms = 15) => {
+        try {
+            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate(ms);
+            }
+        } catch (_) {
+            // no-op if not supported
+        }
+    }, []);
+
     // Validation function
     const validateForm = () => {
         let newErrors = {};
         if (formData.name.length < 2) {
             newErrors.name = '姓名至少需要2个字符';
+        }
+        // Age must be an integer between 0 and 120
+        const ageNum = Number(formData.age);
+        if (
+            formData.age === '' ||
+            Number.isNaN(ageNum) ||
+            !Number.isInteger(ageNum) ||
+            ageNum < 0 ||
+            ageNum > 120
+        ) {
+            newErrors.age = '请输入有效年龄（0-120岁的整数）';
+        }
+        // Gender must be selected
+        if (!['male', 'female', 'other'].includes(formData.gender)) {
+            newErrors.gender = '请选择性别';
         }
         // Updated phone number validation: just checks if it's digits and not empty if required
         if (!/^\d+$/.test(formData.phone)) {
@@ -338,6 +366,8 @@ const App = () => {
                     // Optionally reset form after successful submission
                     setFormData({
                         name: '',
+                        age: '',
+                        gender: '',
                         phone: '',
                         affectedArea: [],
                         leftEye: null,
@@ -469,6 +499,116 @@ const App = () => {
                                 minLength="2"
                                 required
                             />
+                        </div>
+
+                        {/* Age and Gender */}
+                        <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Age Input */}
+                            <div>
+                                <label htmlFor="age" className="block text-lg font-medium text-gray-800 mb-2 flex items-center">
+                                    <Calendar className="mr-2 text-blue-600" size={20} />
+                                    年龄:
+                                    {errors.age && <span className="text-red-500 text-sm ml-2">{errors.age}</span>}
+                                </label>
+                                <input
+                                    type="number"
+                                    id="age"
+                                    name="age"
+                                    inputMode="numeric"
+                                    min="0"
+                                    max="120"
+                                    step="1"
+                                    value={formData.age}
+                                    onChange={(e) => {
+                                        // Only allow integers and within bounds
+                                        const v = e.target.value;
+                                        if (v === '') { setFormData(prev => ({ ...prev, age: '' })); return; }
+                                        const n = Number(v);
+                                        if (!Number.isNaN(n)) {
+                                            const clamped = Math.max(0, Math.min(120, Math.trunc(n)));
+                                            setFormData(prev => ({ ...prev, age: String(clamped) }));
+                                        }
+                                    }}
+                                    className="p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                                    placeholder="请输入年龄 (0-120)"
+                                    required
+                                />
+                            </div>
+
+                            {/* Gender Select */}
+                            <div>
+                                <label htmlFor="gender" className="block text-lg font-medium text-gray-800 mb-2 flex items-center">
+                                    <User className="mr-2 text-blue-600" size={20} />
+                                    性别:
+                                    {errors.gender && <span className="text-red-500 text-sm ml-2">{errors.gender}</span>}
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    {/* Male */}
+                                    <div>
+                                        <input
+                                            type="radio"
+                                            id="gender-male"
+                                            name="gender"
+                                            value="male"
+                                            checked={formData.gender === 'male'}
+                                            onChange={(e) => { handleChange(e); vibrate(15); }}
+                                            className="peer sr-only"
+                                            required
+                                        />
+                                        <label
+                                            htmlFor="gender-male"
+                                            className={`block w-full select-none cursor-pointer rounded-lg border px-4 py-4 text-center shadow-sm transition transform
+                                                ${formData.gender === 'male' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-300' : 'border-gray-300 bg-white text-gray-700'}
+                                                hover:bg-blue-50 hover:border-blue-500 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400`}
+                                            aria-label="男"
+                                        >
+                                            <span className="text-base">男</span>
+                                        </label>
+                                    </div>
+                                    {/* Female */}
+                                    <div>
+                                        <input
+                                            type="radio"
+                                            id="gender-female"
+                                            name="gender"
+                                            value="female"
+                                            checked={formData.gender === 'female'}
+                                            onChange={(e) => { handleChange(e); vibrate(15); }}
+                                            className="peer sr-only"
+                                        />
+                                        <label
+                                            htmlFor="gender-female"
+                                            className={`block w-full select-none cursor-pointer rounded-lg border px-4 py-4 text-center shadow-sm transition transform
+                                                ${formData.gender === 'female' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-300' : 'border-gray-300 bg-white text-gray-700'}
+                                                hover:bg-blue-50 hover:border-blue-500 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400`}
+                                            aria-label="女"
+                                        >
+                                            <span className="text-base">女</span>
+                                        </label>
+                                    </div>
+                                    {/* Other */}
+                                    <div>
+                                        <input
+                                            type="radio"
+                                            id="gender-other"
+                                            name="gender"
+                                            value="other"
+                                            checked={formData.gender === 'other'}
+                                            onChange={(e) => { handleChange(e); vibrate(15); }}
+                                            className="peer sr-only"
+                                        />
+                                        <label
+                                            htmlFor="gender-other"
+                                            className={`block w-full select-none cursor-pointer rounded-lg border px-4 py-4 text-center shadow-sm transition transform
+                                                ${formData.gender === 'other' ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-300' : 'border-gray-300 bg-white text-gray-700'}
+                                                hover:bg-blue-50 hover:border-blue-500 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400`}
+                                            aria-label="其他"
+                                        >
+                                            <span className="text-base">其他</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Phone Input */}
